@@ -1,0 +1,11 @@
+gradio_cache/
+wandb/
+logs/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+.DS_Store
+._*
