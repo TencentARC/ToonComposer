@@ -9,7 +9,7 @@
 <p align="center"> Lingen Li, Guangzhi Wang, Zhaoyang Zhang, Yaowei Li, Xiaoyu Li, Qi Dou, Jinwei Gu, Tianfan Xue, Ying Shan </p>
 
 <p align="center"> <a href='https://lg-li.github.io/project/tooncomposer'><img src='https://img.shields.io/badge/Project-Page-Green'></a> &nbsp;
- <a href='https://huggingface.co/spaces/TencentARC/ToonComposer'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-blue'></a> &nbsp;
+ <a href='https://huggingface.co/TencentARC/ToonComposer'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-blue'></a> &nbsp;
  <a href="https://arxiv.org/abs/2508.10881"><img src="https://img.shields.io/static/v1?label=ArxivPreprint&message=ToonComposer&color=red&logo=arxiv"></a>
 </p>
 
