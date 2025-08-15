@@ -16,11 +16,16 @@
 ## TL;DR
 
 <div align="center">
-<img src='./samples/ToonComposer-Method.jpg' width='800px'>
+<img src='./samples/ToonComposer-TLDR.jpg' width='550px'>
 </div>
 
 Traditional cartoon/anime production is time-consuming, requiring skilled artists for keyframing, inbetweening, and colorization.
 ToonComposer streamlines this with generative AI, turning hours of manual work of inbetweening and colorization into a single, seamless process. Visit our [project page](https://lg-li.github.io/project/tooncomposer) and read our [paper](https://arxiv.org/abs/2508.10881) for more details.
+
+<div align="center">
+<img src='./samples/ToonComposer-Method.jpg' width='800px'>
+</div>
+
 
 ## Quick Start
 
