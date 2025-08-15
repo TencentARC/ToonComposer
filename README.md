@@ -10,7 +10,7 @@
 
 <p align="center"> <a href='https://lg-li.github.io/project/tooncomposer'><img src='https://img.shields.io/badge/Project-Page-Green'></a> &nbsp;
  <a href='https://huggingface.co/spaces/TencentARC/ToonComposer'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-blue'></a> &nbsp;
- <a href="https://arxiv.org/abs/2412.03517"><img src="https://img.shields.io/static/v1?label=Arxiv Preprint&message=ToonComposer&color=red&logo=arxiv"></a>
+ <a href="https://arxiv.org/abs/2508.10881"><img src="https://img.shields.io/static/v1?label=ArxivPreprint&message=ToonComposer&color=red&logo=arxiv"></a>
 </p>
 
 ## TL;DR
@@ -20,7 +20,7 @@
 </div>
 
 Traditional cartoon/anime production is time-consuming, requiring skilled artists for keyframing, inbetweening, and colorization.
-ToonComposer streamlines this with generative AI, turning hours of manual work of inbetweening and colorization into a single, seamless process. Visit our [project page](https://lg-li.github.io/project/tooncomposer) and read our [paper]() for more details.
+ToonComposer streamlines this with generative AI, turning hours of manual work of inbetweening and colorization into a single, seamless process. Visit our [project page](https://lg-li.github.io/project/tooncomposer) and read our [paper](https://arxiv.org/abs/2508.10881) for more details.
 
 ## Quick Start
 
@@ -136,7 +136,7 @@ If you find ToonComposer useful, please consider citing:
 @article{li2025tooncomposer,
   title={ToonComposer: Streamlining Cartoon Production with Generative Post-Keyframing},
   author={Li, Lingen and Wang, Guangzhi and Zhang, Zhaoyang and Li, Yaowei and Li, Xiaoyu and Dou, Qi and Gu, Jinwei and Xue, Tianfan and Shan, Ying},
-  journal={arXiv preprint},
+  journal={arXiv preprint arXiv:2508.10881},
   year={2025}
 }
 ```
