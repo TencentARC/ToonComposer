@@ -14,7 +14,7 @@
  <a href="https://arxiv.org/abs/2508.10881"><img src="https://img.shields.io/static/v1?label=ArxivPreprint&message=ToonComposer&color=red&logo=arxiv"></a>
 </p>
 
-## TL;DR
+## 👀 TL;DR
 
 <div align="center">
 <img src='./samples/ToonComposer-TLDR.jpg' width='550px'>
@@ -27,7 +27,7 @@ ToonComposer streamlines this with generative AI, turning hours of manual work o
 <img src='./samples/ToonComposer-Method.jpg' width='800px'>
 </div>
 
-## Updates
+## ✏️ Updates
 
 [08/18/2025] Online gradio demo is now available on [Hugging Face Space](https://huggingface.co/spaces/TencentARC/ToonComposer).
 
@@ -37,7 +37,7 @@ ToonComposer streamlines this with generative AI, turning hours of manual work o
 
 The website https://tooncomposer.com is <b>NOT</b> hosted, authorized, or endorsed by the ToonComposer team. This site has replicated content from our open-source project without our permission or notification, and we are unaware of the operators’ identity or intentions.
 
-## Quick Start
+## ⚙️ Configuration
 
 ### 1) Clone the repository
 
@@ -48,16 +48,17 @@ cd ToonComposer
 
 ### 2) Set up the Python environment
 
-We recommend Python 3.10 and PyTorch 2.6.0.
+Create a conda environment and install dependencies from requirements.txt.
 
 ```bash
 conda create -n tooncomposer python=3.10 -y
 conda activate tooncomposer
 pip install -r requirements.txt
-pip install flash-attn==2.8.0.post2 --no-build-isolation
+pip install flash-attn==2.8.2 --no-build-isolation
 ```
 
-**Note: ToonComposer requires specific versions for flash-attn (2.8.0.post2) and gradio (5.25.2).**
+**Note: ToonComposer requires specific versions for flash-attn>=2.8.0.post2 and gradio==5.25.2. This configuration is tested on Linux only.**
+
 
 ### 3) Run the app
 
@@ -71,7 +72,7 @@ Open your browser at `http://localhost:7860`.
 
 If you run on a remote server, replace `localhost` with your server IP or hostname.
 
-## Weights and Checkpoints
+## 💾 Weights and Checkpoints
 
 ToonComposer relies on two sets of weights:
 
@@ -116,7 +117,7 @@ Notes:
 - The ToonComposer HF repo organizes weights by resolution: `480p/` and `608p/`. The app automatically loads the correct `config.json` and `tooncomposer.ckpt` from the selected resolution directory.
 - The app checks the HF cache first (`local_files_only=True`) and only downloads if missing.
 
-## Usage Guide
+## 📖 Usage Guide
 
 ### Launch options
 
@@ -141,9 +142,9 @@ The bottom right panel shows status and the generated video. A set of sample inp
 
 ### Limitations
 
-As a generative model, outputs may vary. Try changing seed, steps, CFG scale, or sketch/mask inputs for different results.
+As a generative model, outputs may vary. Try changing seed, steps, CFG scale, pos-aware residual scale, or sketch/mask inputs for different results.
 
-## Citation
+## 📑 Citation
 
 If you find ToonComposer useful, please consider citing:
 
@@ -156,6 +157,6 @@ If you find ToonComposer useful, please consider citing:
 }
 ```
 
-## License
+## 📃 License
 
 See the `LICENSE` file for details.
