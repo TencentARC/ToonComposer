@@ -1,11 +1,9 @@
-import util.env_resolver
 import torch
 import numpy as np
 from PIL import Image
 from tooncomposer import ToonComposer, get_base_model_paths
 import argparse
 import json
-from util.training_util import extract_img_to_sketch
 import os
 import tempfile
 import cv2
@@ -16,6 +14,9 @@ from typing import Optional, List, Dict
 from huggingface_hub import snapshot_download
 
 os.environ["GRADIO_TEMP_DIR"] = os.path.abspath(os.path.join(os.path.dirname(__file__), "gradio_cache"))
+gradio_version = gr.__version__
+if gradio_version != "5.25.2":
+    print(f"[WARNING] ToonComposer app is not tested on gradio=={gradio_version}. Please install gradio==5.25.2 if you encounter any issues.")
 
 # -----------------------------------------------------------------------------
 # Weights resolution and download helpers
@@ -147,10 +148,10 @@ def _merge_with_defaults(cfg: Dict[str, object]) -> Dict[str, object]:
     defaults = {
         "base_model_name": "Wan2.1-I2V-14B-480P",
         "learning_rate": 1e-5,
-        "train_architecture": "lora",
+        "train_architecture": None,
         "lora_rank": 4,
         "lora_alpha": 4,
-        "lora_target_modules": "q,k,v,o,ffn.0,ffn.2",
+        "lora_target_modules": "",
         "init_lora_weights": "kaiming",
         "use_gradient_checkpointing": True,
         "tiled": False,
@@ -159,7 +160,6 @@ def _merge_with_defaults(cfg: Dict[str, object]) -> Dict[str, object]:
         "tile_stride_height": 18,
         "tile_stride_width": 16,
         "output_path": "./",
-        "use_local_lora": False,
         "use_dera": False,
         "dera_rank": None,
         "use_dera_spatial": True,
@@ -172,7 +172,6 @@ def _merge_with_defaults(cfg: Dict[str, object]) -> Dict[str, object]:
         "fast_dev": False,
         "max_num_cond_images": 1,
         "max_num_cond_sketches": 2,
-        "visualize_attention": False,
         "random_spaced_cond_frames": False,
         "use_sketch_mask": True,
         "sketch_mask_ratio": 0.2,
@@ -211,18 +210,12 @@ def initialize_model(resolution="480p", fast_dev=False, device="cuda:0", dtype=t
             base_model_name=args.base_model_name,
             model_root=args.model_root,
             learning_rate=args.learning_rate,
-            train_architecture=args.train_architecture,
-            lora_rank=args.lora_rank,
-            lora_alpha=args.lora_alpha,
-            lora_target_modules=args.lora_target_modules,
-            init_lora_weights=args.init_lora_weights,
             use_gradient_checkpointing=args.use_gradient_checkpointing,
             checkpoint_path=args.checkpoint_path,
             tiled=args.tiled,
             tile_size=(args.tile_size_height, args.tile_size_width),
             tile_stride=(args.tile_stride_height, args.tile_stride_width),
             output_path=args.output_path,
-            use_local_lora=args.use_local_lora,
             use_dera=args.use_dera,
             dera_rank=args.dera_rank,
             use_dera_spatial=args.use_dera_spatial,
@@ -235,7 +228,6 @@ def initialize_model(resolution="480p", fast_dev=False, device="cuda:0", dtype=t
             fast_dev=args.fast_dev,
             max_num_cond_images=args.max_num_cond_images,
             max_num_cond_sketches=args.max_num_cond_sketches,
-            visualize_attention=args.visualize_attention,
             random_spaced_cond_frames=args.random_spaced_cond_frames,
             use_sketch_mask=args.use_sketch_mask,
             sketch_mask_ratio=args.sketch_mask_ratio,

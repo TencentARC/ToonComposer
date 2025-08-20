@@ -1,5 +1,4 @@
 import os, torch, lightning, imageio
-from peft import LoraConfig, inject_adapter_in_model
 import numpy as np
 
 from pipeline.i2v_pipeline import WanVideoPipeline
@@ -41,21 +40,19 @@ def get_base_model_paths(base_model_name, format='dict', model_root="./weights")
 
 class ToonComposer(lightning.LightningModule):
     def __init__(self, base_model_name="Wan2.1-I2V-14B-480P", model_root=None, learning_rate=1e-5, lora_rank=4, lora_alpha=4, 
-                 train_architecture=None, lora_target_modules="q,k,v,o,ffn.0,ffn.2", 
-                 init_lora_weights="kaiming", use_gradient_checkpointing=True, 
+                 use_gradient_checkpointing=True, 
                  checkpoint_path=None, video_condition_preservation_mode="first_and_last", 
                  tiled=False, tile_size=(34, 34), tile_stride=(18, 16), output_path=None,
-                 use_local_lora=False, use_dera=False, dera_rank=None, use_dera_spatial=True, use_dera_temporal=True, use_sequence_cond=False, sequence_cond_mode="sparse",
-                 use_channel_cond=False,
+                 use_dera=False, dera_rank=None, use_dera_spatial=True, use_dera_temporal=True,
+                 use_sequence_cond=False, sequence_cond_mode="sparse", use_channel_cond=False,
                  use_sequence_cond_position_aware_residual=False,
                  use_sequence_cond_loss=False, fast_dev=False,
-                 max_num_cond_images=1, max_num_cond_sketches=2, visualize_attention=False,
+                 max_num_cond_images=1, max_num_cond_sketches=2, 
                  random_spaced_cond_frames=False, use_sketch_mask=False, sketch_mask_ratio=0.2, no_first_sketch=False,
-                 test_sampling_steps=15, test_sequence_cond_residual_scale=0.5, height=480, width=832):
+                 test_sampling_steps=15, test_sequence_cond_residual_scale=0.5, height=480, width=832, **kwargs):
         super().__init__()
         
         self.pipe = WanVideoPipeline(device="cpu", torch_dtype=torch.bfloat16)
-        self.use_local_lora = use_local_lora
         self.use_dera = use_dera
         self.use_dera_spatial = use_dera_spatial
         self.use_dera_temporal = use_dera_temporal
@@ -69,7 +66,6 @@ class ToonComposer(lightning.LightningModule):
         self.max_num_cond_images = max_num_cond_images
         self.max_num_cond_sketches = max_num_cond_sketches
         
-        self.visualize_attention = visualize_attention
         self.random_spaced_cond_frames = random_spaced_cond_frames
         self.use_sketch_mask = use_sketch_mask
         self.sketch_mask_ratio = sketch_mask_ratio
@@ -100,7 +96,6 @@ class ToonComposer(lightning.LightningModule):
             use_sequence_cond = False
         
         dit_config = {
-            "use_local_lora": use_local_lora,
             "use_dera": use_dera,
             "dera_rank": dera_rank,
             "use_dera_spatial": use_dera_spatial,
@@ -146,16 +141,6 @@ class ToonComposer(lightning.LightningModule):
             self.pipe.denoising_model().copy_patch_embedding_weights_for_channel_cond()
         
         self.freeze_parameters()
-        if train_architecture == "lora":
-            self.add_lora_to_model(
-                self.pipe.denoising_model(),
-                lora_rank=lora_rank,
-                lora_alpha=lora_alpha,
-                lora_target_modules=lora_target_modules,
-                init_lora_weights=init_lora_weights
-            )
-        elif train_architecture == "full":
-            self.pipe.denoising_model().requires_grad_(True)
             
         if checkpoint_path is not None:
             self.load_tooncomposer_checkpoint(checkpoint_path)
@@ -191,22 +176,6 @@ class ToonComposer(lightning.LightningModule):
         self.pipe.eval()
         self.pipe.denoising_model().train()
         
-    def add_lora_to_model(self, model, lora_rank=4, lora_alpha=4, lora_target_modules="q,k,v,o,ffn.0,ffn.2", init_lora_weights="kaiming"):
-        self.lora_alpha = lora_alpha
-        if init_lora_weights == "kaiming":
-            init_lora_weights = True
-            
-        lora_config = LoraConfig(
-            r=lora_rank,
-            lora_alpha=lora_alpha,
-            init_lora_weights=init_lora_weights,
-            target_modules=lora_target_modules.split(","),
-        )
-        model = inject_adapter_in_model(lora_config, model)
-        for param in model.parameters():
-            if param.requires_grad:
-                param.data = param.to(torch.float32)
-    
     def load_patch_to_model(self, model, pretrained_path, state_dict_converter=None):
         if pretrained_path is not None:
             state_dict = torch.load(pretrained_path, map_location="cpu", weights_only=True)

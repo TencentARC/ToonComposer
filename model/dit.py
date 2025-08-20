@@ -5,26 +5,17 @@ import torch.amp as amp
 import torch.nn as nn
 from util.model_util import hash_state_dict_keys
 from einops import rearrange
+import warnings
 
-try:
-    import flash_attn_interface
-    FLASH_ATTN_3_AVAILABLE = True
-except ModuleNotFoundError:
-    FLASH_ATTN_3_AVAILABLE = False
+FLASH_ATTN_3_AVAILABLE = False
+SAGE_ATTN_AVAILABLE = False
 
 try:
     import flash_attn
     FLASH_ATTN_2_AVAILABLE = True
 except ModuleNotFoundError:
     FLASH_ATTN_2_AVAILABLE = False
-
-try:
-    from sageattention import sageattn
-    SAGE_ATTN_AVAILABLE = True
-except ModuleNotFoundError:
-    SAGE_ATTN_AVAILABLE = False
-
-import warnings
+    print(f"[WARNING] `flash_attn` is NOT installed. Please install it manually: `pip install flash_attn==2.8.2 --no-build-isolation` if possible.")
 
 
 __all__ = ['WanModel']
@@ -327,7 +318,6 @@ class WanSelfAttention(nn.Module):
         self.o = nn.Linear(dim, dim)
         self.norm_q = WanRMSNorm(dim, eps=eps) if qk_norm else nn.Identity()
         self.norm_k = WanRMSNorm(dim, eps=eps) if qk_norm else nn.Identity()
-        self.visualize_attention = False
 
     def forward(self, x, seq_lens, grid_sizes, freqs, sequence_cond_compressed_indices):
         """
@@ -354,12 +344,6 @@ class WanSelfAttention(nn.Module):
         
         q_rope = rope_apply(q, grid_sizes, freqs, sequence_cond_compressed_indices)
         k_rope = rope_apply(k, grid_sizes, freqs, sequence_cond_compressed_indices)
-        
-        if self.visualize_attention:
-            with torch.no_grad():
-                self._last_attn_maps = self._compute_attention_for_visualization(q_rope, k_rope) # CPU tesnor of [S, S]
-                self._last_grid_sizes = grid_sizes
-                self._last_seq_lens = seq_lens
 
         x = flash_attention(
             q=q_rope,
@@ -372,47 +356,7 @@ class WanSelfAttention(nn.Module):
         x = x.flatten(2)
         x = self.o(x)
         return x
-    
-    def _compute_attention_for_visualization(self, q, k):
-        """Compute attention maps for visualization purposes"""
-        # b, _, n, d = q.shape
-        print("Computing attention maps for visualization")
-        # Reshape for attention computation
-        q = q.permute(0, 2, 1, 3)  # [b, n, s, d]
-        k = k.permute(0, 2, 1, 3)  # [b, n, s, d]
-        # query: b, n, s, d
-        print("q.shape=", q.shape)
-        print("k.shape=", k.shape)
-        attention_probs_list = []
-        for i in range(0, q.shape[1], 20):
-            print(f"Computing attention for head {i} to {i+20}")
-            query_attention = q[-1][i : i + 20]
-            key_attention = k[-1][i : i + 20]
-            identity_matrix = torch.eye(
-                query_attention.shape[-2],
-                device=query_attention.device,
-                dtype=query_attention.dtype,
-            ) # shape=[s]
-            attention_probs_temp = torch.nn.functional.scaled_dot_product_attention(
-                query_attention,
-                key_attention,
-                identity_matrix,
-                attn_mask=None,
-                dropout_p=0.0,
-                is_causal=False,
-            )
-            attention_probs_list.append(attention_probs_temp.detach().cpu())
-            del (
-                query_attention,
-                key_attention,
-                identity_matrix,
-                attention_probs_temp,
-            )
-        attention_probs = torch.mean(torch.cat(attention_probs_list), dim=0).float().numpy()
-        print("Attention maps computed. Shape=", attention_probs.shape)
-        # Only keep attention maps, don't compute the output
-        return attention_probs # [s, s]
-
+        
 
 class WanT2VCrossAttention(WanSelfAttention):
 
@@ -499,7 +443,6 @@ class WanAttentionBlock(nn.Module):
                  qk_norm=True,
                  cross_attn_norm=False,
                  eps=1e-6,
-                 use_local_lora=False,
                  use_dera=False,
                  dera_rank=None,
                  use_dera_spatial=True,
@@ -528,12 +471,7 @@ class WanAttentionBlock(nn.Module):
 
         # modulation
         self.modulation = nn.Parameter(torch.randn(1, 6, dim) / dim**0.5)
-        
-        self.use_local_lora = use_local_lora
-        if use_local_lora:
-            from .local_lora import LocalLoRA
-            self.local_lora = LocalLoRA(dim=dim, rank=64, kernel_size=(3, 3), stride=(1, 1))
-            
+
         self.use_dera = use_dera
         if use_dera:
             from .dera import DeRA
@@ -559,8 +497,6 @@ class WanAttentionBlock(nn.Module):
         # self-attention
         x_self_attn_input = self.norm1(x).float() * (1 + e[1]) + e[0]
         y = self.self_attn(x_self_attn_input, seq_lens, grid_sizes, freqs, sequence_cond_compressed_indices)
-        if self.use_local_lora:
-            y = y + self.local_lora(x_self_attn_input, grid_sizes)
         
         if self.use_dera:
             y = y + self.dera(x_self_attn_input, seq_lens, grid_sizes, dera_freqs, sequence_cond_compressed_indices)
@@ -637,7 +573,6 @@ class WanModel(nn.Module):
                  qk_norm=True,
                  cross_attn_norm=False,
                  eps=1e-6,
-                 use_local_lora=False,
                  use_dera=False,
                  dera_rank=None,
                  use_dera_spatial=True,
@@ -670,7 +605,6 @@ class WanModel(nn.Module):
         self.cross_attn_norm = cross_attn_norm
         self.eps = eps
         
-        self.use_local_lora = use_local_lora
         self.use_dera = use_dera
 
         # embeddings
@@ -687,7 +621,7 @@ class WanModel(nn.Module):
         cross_attn_type = 't2v_cross_attn' if model_type == 't2v' else 'i2v_cross_attn'
         self.blocks = nn.ModuleList([
             WanAttentionBlock(cross_attn_type, dim, ffn_dim, num_heads,
-                               window_size, qk_norm, cross_attn_norm, eps, use_local_lora=use_local_lora, 
+                               window_size, qk_norm, cross_attn_norm, eps,
                                use_dera=use_dera, dera_rank=dera_rank, use_dera_spatial=use_dera_spatial, use_dera_temporal=use_dera_temporal)
             for _ in range(num_layers)
         ])

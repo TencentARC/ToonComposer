@@ -26,16 +26,6 @@ def binary_tensor_to_indices(tensor):
     indices = [(row == 1).nonzero(as_tuple=True)[0] for row in tensor]
     return indices
 
-def propagate_visualize_attention_arg(model, visualize_attention=False):
-        """
-        Recursively set the visualize_attention parameter to True for all WanSelfAttention modules
-        Only for inference/test mode
-        """
-        for name, module in model.named_modules():
-            if isinstance(module, WanSelfAttention):
-                if "blocks.0.self_attn" in name or "blocks.19.self_attn" in name or "blocks.39.self_attn" in name:
-                    print(f"Set `visualize_attention` to {visualize_attention} for {name}")
-                    module.visualize_attention = visualize_attention
 
 class WanVideoPipeline(BasePipeline):
 
@@ -160,7 +150,7 @@ class WanVideoPipeline(BasePipeline):
                 state_dict, config = state_dict
         config.update(config_dict or {})
         model = model_cls(**config)
-        if "use_local_lora" in config_dict or "use_dera" in config_dict:
+        if "use_dera" in config_dict:
             strict = False
         missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=strict)
         print(f"Missing keys: {missing_keys}")
@@ -179,7 +169,7 @@ class WanVideoPipeline(BasePipeline):
         if file_path.endswith(".safetensors"):
             return self._load_state_dict_from_safetensors(file_path)
         else:
-            return torch.load(file_path, map_location='cpu')
+            return torch.load(file_path, map_location='cpu', weights_only=True)
     
     def _load_state_dict_from_safetensors(self, file_path, torch_dtype=None):
         state_dict = {}
@@ -408,7 +398,6 @@ class WanVideoPipeline(BasePipeline):
         input_condition_video_sketch=None,
         input_condition_preserved_mask_sketch=None,
         sketch_local_mask=None,
-        visualize_attention=False,
         output_path=None,
         batch_idx=None,
         sequence_cond_residual_scale=1.0,
@@ -476,11 +465,7 @@ class WanVideoPipeline(BasePipeline):
         with torch.amp.autocast(dtype=torch.bfloat16, device_type=torch.device(self.device).type):
             for progress_id, timestep in enumerate(progress_bar_cmd(self.scheduler.timesteps)):
                 timestep = timestep.unsqueeze(0).to(dtype=torch.float32, device=self.device)
-                _should_visualize_attention = visualize_attention and (progress_id == len(self.scheduler.timesteps) - 1)
-                if _should_visualize_attention:
-                    print(f"Visualizing attention maps (Step {progress_id + 1}/{len(self.scheduler.timesteps)}).")
-                    propagate_visualize_attention_arg(self.dit, True)
-        
+                
                 # Inference
                 noise_pred_posi = self.dit(latents, timestep=timestep, **prompt_emb_posi, **image_emb, **extra_input)
                 if isinstance(noise_pred_posi, tuple):
@@ -495,13 +480,6 @@ class WanVideoPipeline(BasePipeline):
 
                 # Scheduler
                 latents = self.scheduler.step(noise_pred, self.scheduler.timesteps[progress_id], latents)
-                
-                # If visualization is enabled, save the attention maps
-                if _should_visualize_attention:
-                    print("Saving attention maps...")
-                    from util.model_util import save_attention_maps
-                    save_attention_maps(self.dit, output_path, batch_idx, timestep.squeeze().cpu().numpy().item())
-                    propagate_visualize_attention_arg(self.dit, False)
 
         # Decode
         self.load_models_to_device(['vae'])
