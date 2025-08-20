@@ -54,10 +54,15 @@ Create a conda environment and install dependencies from requirements.txt.
 conda create -n tooncomposer python=3.10 -y
 conda activate tooncomposer
 pip install -r requirements.txt
-pip install flash-attn==2.8.2 --no-build-isolation
 ```
 
-**Note: ToonComposer requires specific versions for flash-attn>=2.8.0.post2 and gradio==5.25.2. This configuration is tested on Linux only.**
+**Note: ToonComposer requires specific versions for gradio==5.25.2.**
+
+For Linux users, we recommend installing `flash_attn`.
+
+```bash
+pip install flash-attn==2.8.2 --no-build-isolation
+```
 
 
 ### 3) Run the app
@@ -71,6 +76,8 @@ python app.py
 Open your browser at `http://localhost:7860`.
 
 If you run on a remote server, replace `localhost` with your server IP or hostname.
+
+Generating a 480p video with 61 frames requires ~57GB of VRAM. If you don't have sufficient GPU resources, we recommend trying our [🤗 Hugging Face Spaces demo](https://huggingface.co/spaces/TencentARC/ToonComposer) instead.
 
 ## 💾 Weights and Checkpoints
 
